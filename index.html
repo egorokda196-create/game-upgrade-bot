@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gifts Battle Clone</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg: #121214; --card: #1e1e24; --card-hover: #2a2a35;
+            --gold: #ffb800; --gold-glow: rgba(255, 184, 0, 0.3);
+            --text: #ffffff; --muted: #8b8b93;
+            --blue: #3b82f6; --purple: #a855f7; --red: #e52e2e;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; user-select: none; }
+        body { background: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        
+        /* Шапка */
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: var(--card); border-bottom: 1px solid #2a2a35; z-index: 10; }
+        .logo { font-weight: 900; font-size: 20px; color: white; display: flex; align-items: center; gap: 5px; }
+        .balance-box { display: flex; align-items: center; background: #2a2a35; border-radius: 20px; padding: 5px 10px; gap: 8px; border: 1px solid #444; }
+        .balance { font-weight: bold; color: var(--gold); font-size: 18px; }
+        .btn-plus { background: var(--blue); color: white; border: none; border-radius: 50%; width: 24px; height: 24px; font-weight: bold; cursor: pointer; }
+        .admin-btn { display: none; background: var(--red); color: white; border: none; padding: 5px 10px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; margin-left: 10px; }
+
+        /* Контент */
+        .content { flex: 1; overflow-y: auto; padding: 15px; padding-bottom: 90px; display: none; }
+        .content.active { display: block; }
+        h2 { font-size: 22px; margin-bottom: 15px; }
+
+        /* Вкладка Кейсы */
+        .cases-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .case-card { background: var(--card); border-radius: 15px; padding: 15px; text-align: center; border: 1px solid #2a2a35; cursor: pointer; position: relative; }
+        .case-img { font-size: 70px; margin-bottom: 10px; }
+        .case-name { font-size: 14px; font-weight: bold; margin-bottom: 5px; }
+        .case-price { background: #2a2a35; display: inline-block; padding: 5px 15px; border-radius: 20px; font-size: 14px; color: var(--gold); font-weight: bold; }
+        .case-card.rare { border-color: var(--purple); } .case-card.legend { border-color: var(--gold); box-shadow: 0 0 20px var(--gold-glow); }
+
+        /* Вкладка Апгрейд */
+        .upgrade-circle { width: 200px; height: 200px; border-radius: 50%; background: radial-gradient(circle, #2a2a35 0%, #121214 100%); border: 4px solid var(--card); margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; font-size: 80px; }
+        .upgrade-arrows { text-align: center; font-size: 30px; color: var(--muted); margin: 10px 0; }
+        .upgrade-boxes { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+        .upg-box { flex: 1; height: 100px; background: var(--card); border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 40px; color: var(--muted); border: 2px dashed #333; }
+        .upg-chances { display: flex; justify-content: space-between; margin-top: 20px; background: var(--card); padding: 10px; border-radius: 10px; }
+        .upg-chances div { flex: 1; text-align: center; color: var(--muted); font-size: 14px; padding: 5px; cursor: pointer; border-radius: 5px; }
+        .upg-chances div.active { background: #2a2a35; color: white; font-weight: bold; }
+
+        /* Вкладка Крафты */
+        .crafts-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 20px; }
+        .craft-slot { aspect-ratio: 1; background: var(--card); border: 1px dashed #444; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 20px; font-weight: bold; }
+        .craft-action { background: var(--card); padding: 15px; border-radius: 15px; text-align: center; }
+        .btn { background: var(--card-hover); color: white; border: 1px solid #444; padding: 12px; border-radius: 10px; width: 100%; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+
+        /* Вкладка Конкурсы */
+        .contest-card { background: var(--card); border-radius: 15px; margin-bottom: 15px; border: 1px solid #2a2a35; overflow: hidden; }
+        .contest-header { background: #2a2a35; padding: 10px 15px; display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; color: var(--gold); }
+        .contest-body { padding: 15px; text-align: center; }
+        .contest-img { font-size: 80px; margin-bottom: 10px; filter: drop-shadow(0 0 15px var(--gold-glow)); }
+        .contest-btn { background: var(--blue); color: white; border: none; padding: 12px; border-radius: 10px; width: 100%; font-weight: bold; font-size: 16px; margin-top: 15px; }
+
+        /* Вкладка Друзья */
+        .ref-card { background: var(--card); border-radius: 15px; padding: 20px; text-align: center; margin-bottom: 15px; }
+        .ref-link { background: #2a2a35; padding: 10px; border-radius: 10px; font-family: monospace; color: var(--gold); margin: 15px 0; word-break: break-all; }
+        
+        /* Нижнее меню */
+        .nav { position: absolute; bottom: 0; left: 0; right: 0; height: 70px; background: var(--card); border-top: 1px solid #2a2a35; display: flex; justify-content: space-around; align-items: center; z-index: 10; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--muted); font-size: 10px; cursor: pointer; }
+        .nav-item.active { color: white; }
+        .nav-icon { font-size: 22px; margin-bottom: 3px; }
+        .nav-item.center { background: var(--blue); color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; justify-content: center; align-items: center; transform: translateY(-20px); box-shadow: 0 5px 15px rgba(59, 130, 246, 0.4); font-size: 28px; }
+
+        /* Рулетка */
+        .game-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(18,18,20,0.95); z-index: 50; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        .game-overlay.active { display: flex; }
+        .roulette-box { width: 100%; height: 120px; background: var(--card); border-radius: 15px; position: relative; overflow: hidden; margin: 30px 0; border: 1px solid #333; }
+        .roulette-box::before { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 4px; background: var(--gold); transform: translateX(-50%); z-index: 10; box-shadow: 0 0 15px var(--gold); }
+        .track { display: flex; height: 100%; align-items: center; position: absolute; left: 0; }
+        .item { width: 100px; height: 90px; margin: 0 10px; background: #2a2a35; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; border-bottom: 3px solid #555; }
+        .item .emoji { font-size: 30px; } .item .val { font-size: 12px; font-weight: bold; color: var(--gold); }
+
+        /* Админка */
+        .admin-panel { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg); z-index: 100; padding: 20px; display: none; flex-direction: column; }
+        .admin-panel.active { display: flex; }
+        .admin-input { width: 100%; padding: 12px; background: var(--card); border: 1px solid #444; border-radius: 10px; color: white; margin-bottom: 10px; font-size: 16px; }
+        .admin-btn-save { background: #10b981; color: white; border: none; padding: 15px; border-radius: 10px; font-weight: bold; font-size: 16px; cursor: pointer; margin-bottom: 10px; }
+        .admin-close { background: var(--red); color: white; border: none; padding: 15px; border-radius: 10px; font-weight: bold; font-size: 16px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="logo">🐸GB</div>
+        <div style="display: flex; align-items: center;">
+            <div class="balance-box">
+                <span class="balance" id="balance-amount">0</span>
+                <span>⭐</span>
+                <button class="btn-plus" onclick="topUp()">+</button>
+            </div>
+            <button class="admin-btn" id="admin-btn" onclick="openAdmin()">⚙️ Админ</button>
+        </div>
+    </div>
+
+    <div class="content" id="tab-upgrade">
+        <h2>Апгрейд</h2>
+        <div class="upgrade-circle">?</div>
+        <div class="upgrade-arrows">⬇️</div>
+        <div class="upgrade-boxes">
+            <div class="upg-box">?</div>
+            <div style="font-size:24px; color:var(--muted);">»</div>
+            <div class="upg-box">?</div>
+        </div>
+        <div class="upg-chances"><div>x2</div><div>x5</div><div class="active">x10</div><div>x25</div><div>x50</div></div>
+        <button class="btn">Выбрать предмет</button>
+    </div>
+
+    <div class="content" id="tab-crafts">
+        <h2>Крафты</h2>
+        <div class="crafts-grid">
+            <div class="craft-slot">1</div><div class="craft-slot">2</div><div class="craft-slot">3</div><div class="craft-slot">4</div><div class="craft-slot">5</div>
+            <div class="craft-slot">6</div><div class="craft-slot">7</div><div class="craft-slot">8</div><div class="craft-slot">9</div><div class="craft-slot">10</div>
+        </div>
+        <div class="craft-action">
+            <div style="font-size: 40px; margin-bottom: 10px;">⭐</div>
+            <div style="font-weight: bold;">0 <span style="color:var(--muted); font-size:12px; font-weight:normal;">Стоимость Ваших подарков</span></div>
+            <div style="background: #2a2a35; color: var(--muted); padding: 10px; border-radius: 10px; margin-top: 15px; font-size: 14px;">⚠️ Нужно еще 3 подарка</div>
+            <button class="btn">Добавить свой предмет</button>
+        </div>
+    </div>
+
+    <div class="content active" id="tab-cases">
+        <h2>Паки с Гифтами</h2>
+        <div class="cases-grid">
+            <div class="case-card" onclick="startSpin('common', 10, 'Стандартный')">
+                <div class="case-img">🎁</div><div class="case-name">Стандартный</div><div class="case-price">⭐ 10</div>
+            </div>
+            <div class="case-card rare" onclick="startSpin('rare', 50, 'Ценный')">
+                <div class="case-img">💎</div><div class="case-name">Ценный</div><div class="case-price">⭐ 50</div>
+            </div>
+            <div class="case-card legend" onclick="startSpin('legendary', 150, 'Элитный')">
+                <div class="case-img">👑</div><div class="case-name">Элитный</div><div class="case-price">⭐ 150</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="content" id="tab-contests">
+        <h2>Конкурсы</h2>
+        <div class="contest-card">
+            <div class="contest-header"><span>Конкурс</span><span>⏱ 6 дней</span></div>
+            <div class="contest-body">
+                <div class="contest-img">🍭</div>
+                <div style="font-weight: bold; margin-bottom: 5px;">Lol Pop Cappuccino</div>
+                <div style="color: var(--muted); font-size: 14px;">Участники: 23595</div>
+                <div style="margin-top: 10px; font-weight: bold; color: var(--gold);">💎 4.5 / ⭐ 450</div>
+                <button class="contest-btn">Участвовать</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="content" id="tab-friends">
+        <h2>Друзья</h2>
+        <div class="ref-card">
+            <div style="font-size: 20px; font-weight: bold; margin-bottom: 10px;">Приглашай друзей!</div>
+            <div style="color: var(--muted); font-size: 14px;">Зарабатывай бонусы и награды</div>
+            <div class="ref-link" id="ref-link">https://t.me/UpgraderNftBot?start=ref</div>
+            <button class="contest-btn" style="background: var(--card-hover);">Скопировать ссылку</button>
+        </div>
+    </div>
+
+    <div class="nav">
+        <div class="nav-item" onclick="switchTab('upgrade', this)"><div class="nav-icon">⏫</div>Апгрейд</div>
+        <div class="nav-item" onclick="switchTab('crafts', this)"><div class="nav-icon">🎯</div>Крафты</div>
+        <div class="nav-item center" onclick="switchTab('cases', this)">📦</div>
+        <div class="nav-item" onclick="switchTab('contests', this)"><div class="nav-icon">🎁</div>Конкурсы</div>
+        <div class="nav-item" onclick="switchTab('friends', this)"><div class="nav-icon">👤</div>Друзья</div>
+    </div>
+
+    <div class="game-overlay" id="overlay">
+        <h2 id="case-title">Открываем...</h2>
+        <div class="roulette-box"><div class="track" id="track"></div></div>
+        <button class="btn" style="background:var(--gold); color:black; display:none;" id="close-btn" onclick="closeGame()">Забрать</button>
+    </div>
+
+    <div class="admin-panel" id="admin-panel">
+        <h2>⚙️ Админ Панель</h2>
+        <p style="color:var(--muted); margin-bottom: 20px;">ID: <span id="my-id"></span></p>
+        <input type="number" class="admin-input" id="admin-amount" placeholder="Сумма звезд (например: 10000)">
+        <button class="admin-btn-save" onclick="adminGiveStars()">Выдать звезды себе</button>
+        <input type="text" class="admin-input" id="admin-nft" placeholder="Название NFT (например: Корона)">
+        <button class="admin-btn-save" onclick="adminGiveNft()">Выдать NFT себе</button>
+        <button class="admin-close" onclick="closeAdmin()">Закрыть</button>
+    </div>
+<script>
+    // ==========================================
+    // ⚠️ ВАШИ НАСТРОЙКИ (ИЗМЕНИТЕ ЭТИ ДВЕ СТРОКИ) ⚠️
+    // ==========================================
+    const API_URL = "https://myminiapp.wisp.uno"; // Ваш домен с Wispbyte
+    const ADMIN_ID = 1780245734; // <--- ВАШ ID ИЗ @userinfobot
+    // ==========================================
+
+    let tg = window.Telegram.WebApp;
+    tg.expand();
+    const userId = tg.initDataUnsafe?.user?.id || 0;
+    
+    if (userId === ADMIN_ID) {
+        document.getElementById('admin-btn').style.display = 'block';
+        document.getElementById('my-id').innerText = userId;
+        document.getElementById('ref-link').innerText = `https://t.me/UpgraderNftBot?start=ref_${userId}`;
+    }
+
+    let balance = 0;
+    let isSpinning = false;
+
+    const CASE_ITEMS = {
+        common: [ {e:"⭐",v:1}, {e:"🌟",v:5}, {e:"💫",v:15}, {e:"🧸",v:"NFT"} ],
+        rare: [ {e:"⭐",v:10}, {e:"🌟",v:30}, {e:"💫",v:80}, {e:"💍",v:"NFT"}, {e:"🌹",v:"NFT"} ],
+        legendary: [ {e:"⭐",v:50}, {e:"🌟",v:150}, {e:"🚀",v:"NFT"}, {e:"🏆",v:"NFT"}, {e:"👑",v:"NFT"} ]
+    };
+
+    async function syncBalance() {
+        try {
+            const res = await fetch(`${API_URL}/api/balance?user_id=${userId}`);
+            const data = await res.json();
+            balance = data.balance;
+            document.getElementById('balance-amount').innerText = balance;
+        } catch (e) {
+            document.getElementById('balance-amount').innerText = "ERR";
+        }
+    }
+
+    function switchTab(tab, el) {
+        document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById(`tab-${tab}`).classList.add('active');
+        if(el) el.classList.add('active');
+    }
+
+    async function startSpin(caseType, cost, title) {
+        if (isSpinning) return;
+        if (balance < cost) { tg.showAlert('Недостаточно звезд!'); return; }
+
+        isSpinning = true;
+        document.getElementById('overlay').classList.add('active');
+        document.getElementById('case-title').innerText = `Кейс: ${title}`;
+        document.getElementById('close-btn').style.display = 'none';
+
+        try {
+            const res = await fetch(`${API_URL}/api/spin`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: userId, case_type: caseType })
+            });
+            const data = await res.json();
+            
+            if (data.error) {
+                tg.showAlert(data.error); closeGame(); return;
+            }
+
+            balance = data.new_balance;
+            document.getElementById('balance-amount').innerText = balance;
+            runAnimation(caseType, data.win);
+
+        } catch (e) {
+            tg.showAlert("Ошибка соединения с сервером"); closeGame();
+        }
+    }
+
+    function runAnimation(caseType, winItem) {
+        const track = document.getElementById('track');
+        track.innerHTML = '';
+        const items = CASE_ITEMS[caseType];
+        
+        for(let i=0; i<50; i++) {
+            const p = items[Math.floor(Math.random() * items.length)];
+            track.innerHTML += `<div class="item"><div class="emoji">${p.e}</div><div class="val">${p.v==="NFT"?"NFT":p.v+"⭐"}</div></div>`;
+        }
+        
+        const winEl = document.createElement('div');
+        winEl.className = 'item';
+        winEl.innerHTML = `<div class="emoji">${winItem.emoji}</div><div class="val">${winItem.isNft?"NFT":winItem.value+"⭐"}</div>`;
+        track.replaceChild(winEl, track.children[45]);
+
+        track.style.transition = 'none';
+        track.style.transform = 'translateX(0px)';
+
+        setTimeout(() => {
+            track.style.transition = 'transform 4s cubic-bezier(0.1, 0.7, 0.1, 1)';
+            const itemW = 120;
+            const centerOff = (document.querySelector('.roulette-box').offsetWidth / 2) - (itemW / 2);
+            track.style.transform = `translateX(${-(45 * itemW) + centerOff}px)`;
+
+            setTimeout(() => {
+                isSpinning = false;
+                document.getElementById('close-btn').style.display = 'block';
+                if(winItem.isNft) syncBalance();
+            }, 4100);
+        }, 50);
+    }
+
+    function closeGame() {
+        document.getElementById('overlay').classList.remove('active');
+    }
+
+    function topUp() {
+        tg.showPopup({
+            title: 'Пополнение', message: 'Выберите сумму:',
+            buttons: [{id: '100', type: 'default', text: '100 ⭐'}, {id: '500', type: 'default', text: '500 ⭐'}, {id: 'cancel', type: 'cancel'}]
+        }, function(id) {
+            if (id !== 'cancel') tg.sendData(JSON.stringify({ action: 'topup', amount: parseInt(id) }));
+        });
+    }
+        function openAdmin() { document.getElementById('admin-panel').classList.add('active'); }
+        function closeAdmin() { document.getElementById('admin-panel').classList.remove('active'); }
+
+        async function adminGiveStars() {
+            const amount = document.getElementById('admin-amount').value;
+            if(!amount) return;
+            await fetch(`${API_URL}/api/admin/give_stars`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ admin_id: userId, target_id: userId, amount: amount })
+            });
+            tg.showAlert(`Выдано ${amount} звезд!`); syncBalance(); closeAdmin();
+        }
+
+        async function adminGiveNft() {
+            const nftName = document.getElementById('admin-nft').value;
+            if(!nftName) return;
+            await fetch(`${API_URL}/api/admin/give_nft`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ admin_id: userId, target_id: userId, nft_name: nftName })
+            });
+            tg.showAlert(`Выдан NFT: ${nftName}!`); syncBalance(); closeAdmin();
+        }
+
+        syncBalance();
+    </script>
+</body>
+</html>
